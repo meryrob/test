@@ -1,0 +1,793 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registro de Empleados</title>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-recognition@0.9.4/lib/index.min.js"></script>
+
+  <style>
+
+    
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+.main-container {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333333;
+}
+
+.employee-form {
+  margin-top: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #666666;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  color: #333333;
+}
+
+button {
+  padding: 12px 24px;
+  display: block;
+  margin: 20px auto;
+  border: none;
+  border-radius: 4px;
+  background-color: #333333;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+}
+
+button:hover {
+  background-color: #555555;
+}
+
+.session-buttons {
+  text-align: center;
+}
+
+.popup,
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  display: none;
+}
+
+/* Estilos para el contenido de la ventana modal */
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  width: 80%;
+  max-width: 600px;
+  max-height: 90vh; 
+  overflow: auto; 
+}
+
+#webcam,
+#canvas {
+  width: 100%;
+  height: auto;
+  border: 2px solid rgb(61, 61, 61);
+}
+
+#capture-btn,
+#confirm-btn,
+#retry-btn {
+  margin-top: 20px;
+  display: inline-block;
+}
+
+#close-modal-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: red;
+  border: none;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+}
+
+#close-modal-btn:hover {
+  background: #cc0000;
+}
+
+
+#register-btn {
+  background-color: #616165;
+}
+
+#login-btn {
+  background-color: #36973c;
+}
+
+#logout-btn {
+  background-color: #da1c19;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  display: none;
+}
+
+.popup-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.popup p {
+  margin: 0;
+  font-size: 16px;
+  text-align: center;
+}
+
+.success-message {
+  background-color: rgb(15, 186, 15);
+  color: white;
+  padding: 50px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+.error-message {
+  background-color: red;
+  color: white;
+  font-size: large;
+  padding: 50px;
+  border-radius: 5px;
+}
+
+
+  </style>
+  
+</head>
+<body>
+  <div class="main-container">
+    <h1>Registro de Empleados</h1>
+    <div class="employee-form">
+      <!-- Formulario para registrar empleado -->
+      <p><strong>Complete el formulario para registrarse</strong></p>
+    
+      <label for="employee-id">ID del Empleado:</label>
+      <input type="text" id="employee-id" placeholder="ingrese ID del usuario..." required>
+      <label for="employee-name">Nombre:</label>
+      <input type="text" id="employee-name" placeholder="ingrese nombre..."required>
+      <label for="employee-lastname">Apellido:</label>
+      <input type="text" id="employee-lastname" placeholder="ingrese apellido...">
+      <label for="employee-schedule">Horario de Ingreso:</label>
+      <select id="employee-schedule">
+        <option value="07:00 AM">07:00 AM</option>
+        <option value="08:00 AM">08:00 AM</option>
+        <option value="09:00 AM">09:00 AM</option>
+      </select>
+      <label for="employee-worksite">Obra:</label>
+      <input type="text" id="employee-worksite" placeholder="ingrese obra..." required>
+      <!-- Otros campos para ingresar información del empleado (ubicación, etc.) -->
+      <button id="register-btn">Registrar</button>
+    <!-- Ventana modal para la captura de rostro -->
+      <div id="capture-modal" class="modal">
+        <div class="modal-content">
+          <video id="webcam" autoplay></video>
+          <canvas id="canvas"></canvas>
+          <button id="capture-btn">Capturar</button>
+          <button id="confirm-btn">Confirmar</button>
+          <button id="retry-btn">Volver a tomar</button>
+          <button id="close-modal-btn">X</button>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Botones para iniciar y cerrar sesión -->
+    <div class="session-buttons">
+      <button id="login-btn">Iniciar Sesion</button>
+      <button id="logout-btn">Cerrar Sesion</button>
+    </div>
+  </div>
+
+  <!-- Otros elementos de la interfaz gráfica -->
+  <!-- Ventana emergente para ingresar información del empleado -->
+  <div id="popup" class="popup">
+    <!-- Contenido de la ventana emergente -->
+  </div>
+
+  <!-- Otros scripts y biblisotecas necesarios -->
+  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-storage.js"></script>
+  <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+  <script>
+
+let sesionesIniciadas = [];
+let tiemposEntreSesiones = [];
+// Resto de tu código...
+
+
+document.addEventListener('DOMContentLoaded', async function() {
+    var firebaseConfig = {
+      apiKey: "2690b047f4515a27ed1177af4fe366d6d7c049ad",
+      authDomain: "lurovyregistroid.firebaseapp.com",
+      projectId: "lurovyregistroid",
+      storageBucket: "lurovyregistroid.appspot.com",
+    }
+  
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  
+    const API_KEY = "AIzaSyBxp_VTPbL085scU2mg7UxCKcUHnLoL3ms"; // Reemplaza "TU_API_KEY" con tu propia clave de API de Google Maps
+  
+    async function getGeolocation() {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+    }
+  
+    // Inicializar Firestore
+    var db = firebase.firestore();
+  
+    // Inicializar Firebase Storage
+    var storage = firebase.storage();
+
+  
+    try {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('https://unpkg.com/@vladmandic/face-api/model');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('https://unpkg.com/@vladmandic/face-api/model');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('https://unpkg.com/@vladmandic/face-api/model');
+      console.log("Los modelos se cargaron correctamente.")
+    } catch (error) {
+      console.error('Error al cargar los modelos de Face API:', error);
+    }
+
+    const video = document.getElementById('webcam');
+    const captureButton = document.getElementById('capture-btn');
+    const canvas = document.getElementById('canvas');
+    const confirmButton = document.getElementById('confirm-btn');
+    const retryButton = document.getElementById('retry-btn');
+    const captureModal = document.getElementById('capture-modal');
+    const closeButton = document.getElementById('close-modal-btn');
+    const loginButton = document.getElementById('login-btn');
+    const logoutButton = document.getElementById('logout-btn');
+  
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(console.error);
+  
+    captureButton.addEventListener('click', function() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+      // Detectar el rostro en la imagen
+      faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+        .then((detectionWithLandmarks) => {
+          if (!detectionWithLandmarks) {
+            showError('No se detectó ningún rostro en la imagen. Por favor, toma otra foto.');
+            return;
+          }
+  
+          // Mostrar los botones para confirmar o volver a tomar la imagen
+          captureButton.style.display = 'none';
+          confirmButton.style.display = 'inline';
+          retryButton.style.display = 'inline';
+        })
+        .catch((error) => {
+          showError('Error al detectar el rostro:', error);
+        });
+    });
+  
+    retryButton.addEventListener('click', function() {
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  
+      captureButton.style.display = 'inline';
+      confirmButton.style.display = 'none';
+      retryButton.style.display = 'none';
+    });
+  
+    closeButton.addEventListener('click', function() {
+      captureModal.style.display = 'none';
+    });
+  
+    async function registrarEmpleadoEnBaseDeDatos(id, nombre, apellido, horario, obra, descriptor) {
+      try {
+        // Verificar si el descriptor facial ya existe en la base de datos
+        const employeesCollection = await db.collection("test").get();
+        const duplicateEmployee = employeesCollection.docs.find((doc) => {
+          const existingDescriptor = new Float32Array(doc.data().descriptor);
+          return existingDescriptor.length === descriptor.length && faceapi.euclideanDistance(existingDescriptor, descriptor) < 0.4;
+        });
+  
+        if (duplicateEmployee) {
+          showError("Este rostro ya ha sido registrado con otro ID. No se permite duplicados.");
+          return;
+        }
+  
+        // Si no hay duplicados, entonces registrar al empleado en la base de datos
+        if (!descriptor) {
+          // Si no existe el descriptor, obtener la URL de la imagen desde Firebase Storage
+          const imageURL = `https://storage.googleapis.com/lurovyregistroid.appspot.com/test/${id}.jpg`;
+          const image = await faceapi.fetchImage(imageURL);
+  
+          // Detectar el rostro en la imagen
+          const detectionWithLandmarks = await faceapi.detectSingleFace(image, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+          if (!detectionWithLandmarks) {
+            showError('No se detectó ningún rostro en la imagen. Por favor, toma otra foto.');
+            return;
+          }
+  
+          // Obtener el descriptor del rostro detectado
+          descriptor = detectionWithLandmarks.descriptor;
+  
+          sessionStorage.setItem('currentDescriptor', JSON.stringify(Array.from(descriptor)))
+        }
+  
+        // Registrar al empleado en la base de datos
+        await db.collection("test").doc(id).set({
+          nombre: nombre,
+          apellido: apellido,
+          horario: horario,
+          obra: obra,
+          descriptor: Array.from(descriptor),
+          horasTotalesTrabajadas: 0,
+          presentismo: "-", // Establecer el presentismo inicialmente como "ausente"
+          fechas: []
+        });
+  
+        showRegistrationSuccessMessage('Empleado registrado correctamente en la base de datos.');
+      } catch (error) {
+        showError('Error al registrar el empleado:', error.message);
+      }
+    }
+  
+    async function actualizarHorasTrabajadasEnBaseDeDatos(id, tiempoTrabajado) {
+      try {
+        const employeeDocRef = db.collection("test").doc(id);
+        await employeeDocRef.update({
+          horasTotalesTrabajadas: firebase.firestore.FieldValue.increment(tiempoTrabajado)
+        });
+        console.log('Horas totales trabajadas actualizadas en la base de datos.');
+      } catch (error) {
+        console.error('Error al actualizar las horas totales trabajadas:', error.message);
+      }
+    }
+  
+    async function actualizarPresentismoEnBaseDeDatos(id, presentismo) {
+      try {
+        const employeeDocRef = db.collection("test").doc(id);
+        await employeeDocRef.update({
+          presentismo: presentismo
+        });
+        console.log('Presentismo actualizado en la base de datos.');
+      } catch (error) {
+        console.error('Error al actualizar el presentismo:', error.message);
+      }
+    }
+  
+    const registerButton = document.getElementById('register-btn');
+    const idInput = document.getElementById('employee-id');
+    const nameInput = document.getElementById('employee-name');
+    const lastnameInput = document.getElementById('employee-lastname');
+    const scheduleSelect = document.getElementById('employee-schedule');
+    const worksiteInput = document.getElementById('employee-worksite');
+  
+    registerButton.addEventListener('click', function() {
+      captureModal.style.display = 'flex';
+    });
+  
+    confirmButton.addEventListener('click', async function() {
+      // Convertir la imagen del canvas a un blob
+      canvas.toBlob(async function(blob) {
+        const id = idInput.value;
+        const name = nameInput.value;
+        const lastname = lastnameInput.value;
+        const schedule = scheduleSelect.value;
+        const worksite = worksiteInput.value;
+  
+        const detectionWithLandmarks = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+  
+        if (!id || !name || !lastname || !schedule || !worksite) {
+          showError('Por favor, completa todos los campos antes de tomar la captura.');
+          return;
+        }
+  
+        if (!detectionWithLandmarks) {
+          showError('No se detectó ningún rostro en la imagen. Por favor, toma otra foto.');
+          return;
+        }
+  
+        const storageRef = storage.ref('test/' + id + '.jpg');
+  
+        // Verificar si el ID ya existe en la base de datos
+        const existingDoc = await db.collection("test").doc(id).get();
+        if (existingDoc.exists) {
+          showError('Este ID ya ha sido registrado. Por favor, ingrese un ID único.');
+          return;
+        }
+  
+        await storageRef.put(blob);
+  
+        await registrarEmpleadoEnBaseDeDatos(id, name, lastname, schedule, worksite, Array.from(detectionWithLandmarks.descriptor));
+  
+        captureModal.style.display = 'none';
+      });
+    });
+  
+    // Recuperar el descriptor de la sesión del navegador
+    const savedDescriptor = sessionStorage.getItem('currentDescriptor');
+    if (savedDescriptor) {
+      // Aquí puedes hacer algo con el descriptor guardado, como iniciar sesión automáticamente
+    }
+
+    
+
+loginButton.addEventListener('click', async function() {
+  const id = idInput.value;
+  const doc = await db.collection("test").doc(id).get();
+  if (!doc.exists) {
+    showError('Este usuario no existe.');
+    return;
+  }
+
+  const puedeIniciarSesion = await recuperarSesionesDeFirestore(id);
+    if (!puedeIniciarSesion) return;
+
+  const employee = doc.data();
+  const savedDescriptor = new Float32Array(employee.descriptor);
+
+  // Tomar una captura de la cámara web
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const context = canvas.getContext('2d');
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions());
+
+  if (detections.length === 0) {
+    showError('No se detectó ningún rostro.');
+    return;
+  }
+
+  const detectionWithLandmarks = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+  if (!detectionWithLandmarks) {
+    showError('No se detectó ningún rostro.');
+    return;
+  }
+
+  const currentDescriptor = detectionWithLandmarks.descriptor;
+  const distance = faceapi.euclideanDistance(currentDescriptor, savedDescriptor);
+
+  console.log('Distancia entre descriptores:', distance);
+
+  if (distance < 0.7) {
+    // Obtener la fecha y hora actual
+    const fechaInicioSesion = new Date();
+
+    const fechaInicioSesionObj = {
+      fechaInicioSesion: firebase.firestore.Timestamp.fromMillis(fechaInicioSesion.getTime()),
+      fechaInicioSesionHora: `${fechaInicioSesion.getHours()}:${fechaInicioSesion.getMinutes()}:${fechaInicioSesion.getSeconds()}`
+    };
+
+
+    try {
+      const position = await getGeolocation();
+      const { latitude, longitude } = position.coords;
+
+      const ubicacion = {
+        latitud: latitude,
+        longitud: longitude
+      };
+
+      // Actualizar el objeto con la ubicación
+      fechaInicioSesionObj.ubicacion = ubicacion;
+
+      // Crear el objeto con los datos del inicio de sesión
+      const inicioSesionData = {
+        nombre: employee.nombre,
+        apellido: employee.apellido,
+        horario: employee.horario,
+        obra: employee.obra,
+        ...fechaInicioSesionObj, // Agregar la fecha de inicio de sesión y la hora
+        presentismo: null // El presentismo se establece según las horas trabajadas
+      };
+
+      // Añadir la sesión iniciada al arreglo
+      sesionesIniciadas.push(inicioSesionData);
+
+    //   // Actualizar el registro de tiempos entre sesiones si hay más de una sesión
+    //   if (sesionesIniciadas.length > 1) {
+    //     const sesionAnterior = sesionesIniciadas[sesionesIniciadas.length - 2];
+    //     const tiempoEntreSesiones = (fechaInicioSesionObj.fechaInicioSesion.toMillis() - sesionAnterior.cierreSesion.toMillis()) / (1000 * 60); // En minutos
+    //     tiemposEntreSesiones.push(tiempoEntreSesiones);
+    //   }
+
+      // Enviar datos a Firestore
+      const userDoc = db.collection("test").doc(id);
+      await userDoc.update({
+        sesiones: firebase.firestore.FieldValue.arrayUnion(inicioSesionData)
+      });
+
+      showWelcomeMessage(`Acceso concedido. ${employee.nombre} ${employee.apellido}.`);
+    } catch (error) {
+      console.error('Error al obtener la ubicación:', error.message);
+      showError('Error al obtener la ubicación.');
+    }
+  } else {
+    showError('Acceso denegado. El rostro no coincide.');
+  }
+});
+
+
+logoutButton.addEventListener('click', async function() {
+  const id = idInput.value;
+
+  // Recuperar sesiones de Firestore
+  const puedeCerrarSesion = await recuperarSesionesDeFirestore(id, false);
+    if (!puedeCerrarSesion) return;
+
+  const doc = await db.collection("test").doc(id).get();
+  if (!doc.exists) {
+    showError('Este usuario no existe.');
+    return;
+  }
+
+  const employee = doc.data();
+  const savedDescriptor = new Float32Array(employee.descriptor);
+
+  // Tomar una captura de la cámara web
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const context = canvas.getContext('2d');
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions());
+
+  const detectionWithLandmarks = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+  if (!detectionWithLandmarks) {
+    showError('No se detectó ningún rostro.');
+    return;
+  }
+
+  const currentDescriptor = detectionWithLandmarks.descriptor;
+  const distance = faceapi.euclideanDistance(currentDescriptor, savedDescriptor);
+
+  if (distance < 0.7) {
+    // Obtener la fecha y hora actual al cerrar la sesión
+    const fechaCierreSesion = new Date();
+const fechaInicioSesionObj = sesionesIniciadas.find(session => !session.cierreSesion);
+
+if (!fechaInicioSesionObj) {
+  showError('No se encontró una sesión activa para cerrar.');
+  return;
+}
+
+fechaInicioSesionObj.cierreSesion = firebase.firestore.Timestamp.fromMillis(fechaCierreSesion.getTime());
+fechaInicioSesionObj.cierreSesionHora = `${fechaCierreSesion.getHours()}:${fechaCierreSesion.getMinutes()}:${fechaCierreSesion.getSeconds()}`;
+
+const tiempoTrabajadoEnMinutos = (fechaInicioSesionObj.cierreSesion.toMillis() - fechaInicioSesionObj.fechaInicioSesion.toMillis()) / (1000 * 60);
+
+    // Calcular el tiempo trabajado en horas y minutos
+    const horasTrabajadas= Math.floor(tiempoTrabajadoEnMinutos / 60);
+    const minutosTrabajados = tiempoTrabajadoEnMinutos % 60;
+
+    // Almacenar el tiempo trabajado en formato de horas y minutos en la sesión actual
+    fechaInicioSesionObj.horasTrabajadas= horasTrabajadas;
+    fechaInicioSesionObj.minutosTrabajados = minutosTrabajados;
+
+    // Calcular el presentismo
+    fechaInicioSesionObj.presentismo = calcularPresentismo(tiempoTrabajadoEnMinutos);
+
+
+    // Actualizar el registro de tiempos entre sesiones si hay más de una sesión
+    if (sesionesIniciadas.length > 1) {
+    const sesionAnterior = sesionesIniciadas[sesionesIniciadas.length - 2];
+     }
+
+    // Enviar datos a Firestore
+    const userDoc = db.collection("test").doc(id);
+    await userDoc.update({
+    sesiones: firebase.firestore.FieldValue.arrayRemove(fechaInicioSesionObj), // Eliminar la sesión iniciada
+    sesionesCerradas: firebase.firestore.FieldValue.arrayUnion(fechaInicioSesionObj) // Agregar la sesión cerrada
+    });
+
+    // Calcular las horas totales trabajadas de todas las sesiones
+    const horasTotalesTrabajadas = sesionesIniciadas.reduce((total, session) => total + (session.tiempoTrabajado / 60), 0); // En horas
+
+    // Actualizar las horas totales trabajadas en el documento del usuario
+    await userDoc.update({
+    horasTotalesTrabajadas: horasTotalesTrabajadas
+    });
+
+    showWelcomeMessage(`Sesión cerrada. ${employee.nombre} ${employee.apellido}.`);
+
+    } else {
+        showError('Acceso denegado. El rostro no coincide.');
+    }
+});
+
+
+// // Función para recuperar sesiones de Firestore
+// async function recuperarSesionesDeFirestore(id) {
+//   try {
+//     const doc = await db.collection("test").doc(id).get();
+//     if (doc.exists) {
+//       const data = doc.data();
+//       sesionesIniciadas = data.sesiones ? data.sesiones : [];
+//     } else {
+//       showError('Este usuario no existe.');
+//     }
+//   } catch (error) {
+//     console.error('Error al recuperar sesiones de Firestore:', error);
+//   }
+// }
+
+async function recuperarSesionesDeFirestore(id, esInicio = true) {
+    try {
+        const doc = await db.collection("test").doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            sesionesIniciadas = data.sesiones ? data.sesiones : [];
+            const sesionesCerradas = data.sesionesCerradas ? data.sesionesCerradas : [];
+
+            // Verificamos si hay una sesión iniciada o cerrada para el día actual
+            const sesionDelDia = esInicio ? sesionesIniciadas : sesionesCerradas;
+            const sesionHoy = sesionDelDia.find(sesion => {
+                const fecha = new Date(sesion.fechaInicioSesion.toDate());
+                const hoy = new Date();
+                return fecha.toDateString() === hoy.toDateString();
+            });
+
+            if (sesionHoy) {
+                showModal(esInicio ? "Ya has iniciado sesión hoy." : "Ya has cerrado sesión hoy.");
+                return false;
+            }
+        } else {
+            showError('Este usuario no existe.');
+        }
+        return true;
+    } catch (error) {
+        console.error('Error al recuperar sesiones de Firestore:', error);
+    }
+}
+
+
+
+
+// Función para calcular el presentismo
+function calcularPresentismo(tiempoTrabajadoEnMinutos) {
+  if (tiempoTrabajadoEnMinutos <= -30) {
+    return "Tarde"; // Si llega 30 minutos tarde o más
+  } else if (tiempoTrabajadoEnMinutos >= 240) {
+    return "Presente"; // Si trabaja más de 4 horas (240 minutos)
+  } else if (tiempoTrabajadoEnMinutos >= 240 && tiempoTrabajadoEnMinutos <= 420) {
+    return "Parcial"; // Si trabaja entre 4 y 7 horas (240-420 minutos)
+  } else {
+    return "Ausente"; // Si no inicia, o trabaja menos de 4 horas
+  }
+}
+
+
+});
+
+
+// Función para mostrar mensajes en una ventana emergente
+// function showModal(message, type) {
+//   const popup = document.getElementById('popup');
+//   let className = '';
+
+//   if (type === 'success') {
+//     className = 'success-message';
+//   } else if (type === 'error') {
+//     className = 'error-message';
+//   }
+
+//   popup.innerHTML = `<div class="popup-content ${className}">
+//                         <p>${message}</p>
+//                     </div>`;
+//   popup.style.display = 'block';
+
+//   setTimeout(() => {
+//     popup.style.display = 'none';
+//   }, 3000); // El modal se ocultará automáticamente después de 3 segundos
+// }
+
+// Función para mostrar mensajes en una ventana emergente
+function showModal(message, type) {
+  const popup = document.getElementById('popup');
+  let className = '';
+
+  if (type === 'success') {
+    className = 'success-message';
+  } else if (type === 'error') {
+    className = 'error-message';
+  }
+
+  popup.innerHTML = `
+    <div class="popup-content ${className}">
+      <p>${message}</p>
+    </div>
+  `;
+  popup.style.display = 'flex';
+
+  setTimeout(() => {
+    closePopup();
+  }, 3000); // El modal se ocultará automáticamente después de 3 segundos
+}
+
+function closePopup() {
+  const popup = document.getElementById('popup');
+  popup.style.display = 'none';
+}
+
+// Función para mostrar un mensaje de bienvenida
+function showWelcomeMessage(name) {
+  showModal(` ${name}`, 'success');
+}
+
+// Función para mostrar un mensaje de error
+function showError(message) {
+  showModal(`Error: ${message}`, 'error');
+}
+
+// Función para mostrar un mensaje de registro exitoso
+function showRegistrationSuccessMessage(name) {
+  showModal(` ${name}`, 'success');
+}
+
+
+  </script>
+</body>
+</html>
